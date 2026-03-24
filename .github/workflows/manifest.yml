@@ -1,0 +1,37 @@
+name: Generate Image Manifest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'img/**'
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build manifest.json
+        run: |
+          python3 -c "
+          import os, json
+          exts = {'.jpg','.jpeg','.png','.gif','.webp','.avif','.svg'}
+          files = sorted(
+            f for f in os.listdir('img')
+            if os.path.splitext(f)[1].lower() in exts
+          )
+          with open('manifest.json', 'w') as fh:
+            json.dump(files, fh, indent=2)
+          print(f'Wrote {len(files)} images to manifest.json')
+          "
+
+      - name: Commit manifest.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git diff --staged --quiet || git commit -m "chore: update manifest.json"
+          git push
